@@ -21,6 +21,16 @@ package frc.robot;
  */
 public class Constants {
 
+    public static final double kGearRatio = 8.45;
+    public static final double kSensorGearRatio = 1; //educated guess
+    public static final double kWheelDiameterInches = 6; 
+    public static final double kTrackWidthInches = 23.1875;
+    public static final double kMassPounds = 65; //very rough approximation
+    public static final double kJKgMetersSquared = 2.1; //Moment of Interia of 2.1 kg m^2 of drivetrain about its center
+    public static final int k100msPerSecond = 10; //arbitrary
+    public static final int kCountsPerRev = 4096; //arbitrary
+
+
     public static final class DriveConstants {
         public static final int kLeftLeaderPort = 1;
         public static final int kLeftFollowerPort = 2;
@@ -29,6 +39,7 @@ public class Constants {
         public static final double kTurnGain = 2.0;
         public static final double kDeadband = .15;
         public static final double kDriveGain = 2.0;
+        public static final double kRampRate = 1.023;
     }
 
     public static final class TurretConstants {
@@ -91,5 +102,9 @@ public class Constants {
         public static final double kTurnToleranceDeg = 5;
         public static final double kTurnRateToleranceDegPerS = 10; // degrees per second
     }
+
+    // public static final class SimConstants {
+    //     public static final double kSimGearRatio = kGearRatio;
+    // }
 }
 
