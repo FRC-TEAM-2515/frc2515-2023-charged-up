@@ -12,6 +12,7 @@
 
 package frc.robot.subsystems;
 
+import frc.robot.Constants;
 import frc.robot.RobotContainer;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.commands.*;
@@ -25,7 +26,9 @@ import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 
 import edu.wpi.first.wpilibj.CounterBase.EncodingType;
 import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.DriverStation;
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SPI;
@@ -42,6 +45,19 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
+
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
+import com.ctre.phoenix.motorcontrol.TalonSRXSimCollection;
+import edu.wpi.first.math.numbers.N2;
+import edu.wpi.first.math.system.LinearSystem;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.simulation.XboxControllerSim;
+import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.hal.SimDouble;
+
 
 /**
  * COPIED FROM PRACTICE BOT
@@ -68,11 +84,12 @@ public class DriveTrain extends SubsystemBase {
     private DifferentialDrive m_drive;
     private MotorControllerGroup m_driveLeft;
     private MotorControllerGroup m_driveRight;
-    private DifferentialDriveOdometry odometry;
+    private DifferentialDriveOdometry m_odometry;
+    private Field2d m_field;
 
     // Controllers
     protected Gamepad driveController;
-    
+
 
     /**
     *
@@ -131,6 +148,9 @@ public class DriveTrain extends SubsystemBase {
     m_driveLeftFollower.follow(m_driveLeftLeader);
     m_driveRightFollower.follow(m_driveRightLeader);
 
+    m_driveLeftLeader.configOpenloopRamp(DriveConstants.kRampRate);
+    m_driveRightLeader.configOpenloopRamp(DriveConstants.kRampRate);
+
 
     /* PID Values */
     //Need to add closed loop/motion profiling for them to be relevant
@@ -163,20 +183,18 @@ public class DriveTrain extends SubsystemBase {
     }
     Timer.delay(1.0);
     
-    odometry = new DifferentialDriveOdometry(gyro.getRotation2d(), m_driveGain, m_deadband);
-}
+    m_field = new Field2d();
+    SmartDashboard.putData("Field", m_field);
     
+    m_odometry = new DifferentialDriveOdometry(gyro.getRotation2d(), m_driveGain, m_deadband);
+}
 
 @Override
 public void periodic() {
     // This method will be called once per scheduler run
 }
 
-@Override
-public void simulationPeriodic() {
-    // This method will be called once per scheduler run when in simulation
 
-}
 
 // Put methods for controlling this subsystem
 // here. Call these from Commands.
@@ -246,7 +264,7 @@ public void updateSmartDashboard(){
  * @return The pose.
  */
 public Pose2d getPose() {
-    return odometry.getPoseMeters();
+    return m_odometry.getPoseMeters();
 }
 
 /**
@@ -361,4 +379,98 @@ public double getTurnRate() {
     // Put methods for controlling this subsystem
     // here. Call these from Commands.
 
-}
+
+// /**
+//  * Simulation Code
+//  */
+//  private DifferentialDrivetrainSim m_drivetrainSim;
+//  private SimDeviceSim gyroSim;
+//  private TalonSRXSimCollection m_leftDriveSim = m_driveLeftLeader.getSimCollection();
+//  private TalonSRXSimCollection m_rightDriveSim = m_driveRightLeader.getSimCollection();
+//  private boolean simInitalize = true;
+//  private SimDouble m_simYawGyro;
+//  private SimDouble m_simPitchGyro;
+//  private SimDouble m_simRollGryo;
+
+//  private void initalizeSim() {
+//     m_drivetrainSim = new DifferentialDrivetrainSim(
+//         DCMotor.getCIM(2), Constants.kGearRatio, Constants.kJKgMetersSquared, Units.lbsToKilograms(Constants.kMassPounds), Units.inchesToMeters(Constants.kWheelDiameterInches / 2), Units.inchesToMeters(Constants.kTrackWidthInches), null);
+    
+//     gyroSim = new SimDeviceSim("navX-Sensor[0]");
+//     m_simYawGyro = gyroSim.getDouble("Yaw");
+//     m_simYawGyro = gyroSim.getDouble("Pitch");
+//     m_simYawGyro = gyroSim.getDouble("Roll");
+
+    
+// }
+
+
+// @Override
+// public void simulationPeriodic() {
+//     if (!simInitalize) {
+//         initalizeSim();
+//         simInitalize = true;
+//     }
+//         m_leftDriveSim.setBusVoltage(RobotController.getBatteryVoltage());
+//         m_rightDriveSim.setBusVoltage(RobotController.getBatteryVoltage());
+
+//         m_drivetrainSim.setInputs(m_leftDriveSim.getMotorOutputLeadVoltage(), -m_rightDriveSim.getMotorOutputLeadVoltage());
+//         m_drivetrainSim.update(0.02);
+
+//     m_leftDriveSim.setQuadratureRawPosition(
+//             distanceToNativeUnits(
+//                 m_drivetrainSim.getLeftPositionMeters()
+//             ));
+//     m_leftDriveSim.setQuadratureVelocity(
+//             velocityToNativeUnits(
+//                 m_drivetrainSim.getLeftVelocityMetersPerSecond()
+//             ));
+//     m_rightDriveSim.setQuadratureRawPosition(
+//             distanceToNativeUnits(
+//                 -m_drivetrainSim.getRightPositionMeters()
+//             ));
+//     m_rightDriveSim.setQuadratureVelocity(
+//             velocityToNativeUnits(
+//                 -m_drivetrainSim.getRightVelocityMetersPerSecond()
+//             )); 
+
+//      //gyroSim.set(-m_drivetrainSim.getHeading().getDegrees());
+
+//             m_odometry.update(gyro.getRotation2d(),
+//                         nativeUnitsToDistanceMeters(m_driveLeftLeader.getSelectedSensorPosition()),
+//                         nativeUnitsToDistanceMeters(m_driveRightLeader.getSelectedSensorPosition()));
+//             m_field.setRobotPose(m_odometry.getPoseMeters());
+
+// } 
+
+//     private int distanceToNativeUnits(double positionMeters){
+//     double wheelRotations = positionMeters/(2 * Math.PI * Units.inchesToMeters(Constants.kWheelDiameterInches / 2));
+//     double motorRotations = wheelRotations * Constants.kGearRatio;
+//     int sensorCounts = (int)(motorRotations * Constants.kCountsPerRev);
+//     return sensorCounts;
+// }
+    
+//     private int velocityToNativeUnits(double velocityMetersPerSecond){
+//     double wheelRotationsPerSecond = velocityMetersPerSecond/(2 * Math.PI * Units.inchesToMeters(Constants.kWheelDiameterInches / 2));
+//     double motorRotationsPerSecond = wheelRotationsPerSecond * Constants.kSensorGearRatio;
+//     double motorRotationsPer100ms = motorRotationsPerSecond / Constants.k100msPerSecond;
+//     int sensorCountsPer100ms = (int)(motorRotationsPer100ms * Constants.kCountsPerRev);
+//     return sensorCountsPer100ms;
+//     }
+    
+//     private double nativeUnitsToDistanceMeters(double sensorCounts){
+//     double motorRotations = (double)sensorCounts / Constants.kCountsPerRev;
+//     double wheelRotations = motorRotations / Constants.kSensorGearRatio;
+//     double positionMeters = wheelRotations * (2 * Math.PI * Units.inchesToMeters(Constants.kWheelDiameterInches / 2));
+//     return positionMeters;
+//     }
+
+//     // public void setYaw(double yawDegrees) {
+//     //     m_simYawGyro.set(yawDegrees);
+//     //   }
+
+    
+    
+    
+
+// }
