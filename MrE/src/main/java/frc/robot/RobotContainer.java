@@ -23,73 +23,115 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-import frc.robot.subsystems.*;
 
 
-import com.stuypulse.stuylib.input.gamepads.*;
-import com.stuypulse.stuylib.input.Gamepad;
 
-
-/**
- * This class is where the bulk of the robot should be declared.  Since Command-based is a
- * "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
- * periodic methods (other than the scheduler calls).  Instead, the structure of the robot
- * (including subsystems, commands, and button mappings) should be declared here.
- */
 public class RobotContainer {
-
-  private static RobotContainer m_robotContainer = new RobotContainer();
-
-// The robot's subsystems
-    public final Vision m_vision = new Vision();
-    public final Claw m_claw = new Claw();
-    public final Wrist m_wrist = new Wrist();
-    public final Arm m_arm = new Arm();
-    public final Turret m_turret = new Turret();
+  
+    private static RobotContainer m_robotContainer = new RobotContainer();
+    // The robot's subsystems
     public final DriveTrain m_driveTrain = new DriveTrain();
+    
+    public Vision m_vision;
+    public Claw m_claw;
+    public Wrist m_wrist;
+    public Arm m_arm;
+    public Turret m_turret;
 
-// Creates new gamepads connected to Xbox Controllers
-  private final Gamepad driveController = new Xbox(0);
-  private final Gamepad armController = new Xbox(1);
+    public DriveCommand driveCommand;
+
+    // Creates new gamepads connected to Xbox Controllers
+    private static XboxController driveController = new XboxController(0);
+    private final XboxController armController = new XboxController(1);
+
+    // Command choosers
+    SendableChooser<Command> m_autoChooser = new SendableChooser<>();
+
+    // Object choosers
+    public final SendableChooser<Integer> driverControlsChooser = new SendableChooser<>();
+    public final SendableChooser<Integer> controllerScalingChooser = new SendableChooser<>();
+    public final SendableChooser<Integer> driveModeChooser = new SendableChooser<>();
 
   
-  // A chooser for autonomous commands
-  SendableChooser<Command> m_chooser = new SendableChooser<>();
-
-  /**
-  * The container for the robot.  Contains subsystems, OI devices, and commands.
-  */
-  private RobotContainer() {
-      configureDefaultCommands();
-      configureButtonBindings();
-      configureSmartDashboard();
-  }      
-
-  private void configureDefaultCommands() {
-    // DriveTrain.setDefaultCommand(new DriveCommand(m_driveTrain, driveController));
-  }
-
-    /**
-   * Creates button bindings for gamepad
-   */
-  private void configureButtonBindings() {
-    // Create some buttons
-  }
-
-  //private static SendableChooser<Command> autoChooser = new SendableChooser<>();
-
-  private void configureSmartDashboard() {
-    SmartDashboard.putData("Auto Mode", m_chooser);
-  }
-
-
   public static RobotContainer getInstance() {
+    if (m_robotContainer == null) {
+      m_robotContainer = new RobotContainer();
+    }
     return m_robotContainer;
   }
-    
-  public Gamepad getDriveController() {
+  
+  public XboxController getDriveController() {
     return driveController;
   }
+
+  
+  private RobotContainer() {
+    configureButtonBindings();
+    configureSmartDashboard();
+  }      
+
+  public void intSubsystems() {
+    
+    m_vision = new Vision();
+    m_claw = new Claw();
+    m_wrist = new Wrist();
+    m_arm = new Arm();
+    m_turret = new Turret();
+  }
+
+  public boolean invertMotors() {
+    return driveController.getAButtonPressed();
+  }
+
+  public boolean enableBrakes() {
+    return driveController.getBButton();
+  }
+
+  
+  private void configureButtonBindings() {
+    invertMotors();
+    enableBrakes(); 
+  }
+    
+  private void configureSmartDashboard() {
+
+    // Choosers
+    m_autoChooser.setDefaultOption("Simple Autonomous", getAutonomousCommand());
+
+    driverControlsChooser.setDefaultOption("Left Stick", 0);
+    driverControlsChooser.addOption("Trigger Acceleration", 1);
+
+    controllerScalingChooser.setDefaultOption("Cubic", 0);
+    controllerScalingChooser.addOption("Linear", 1);
+    controllerScalingChooser.addOption("Squared", 2);
+    controllerScalingChooser.addOption("Limited Polynomic", 3);
+
+    driveModeChooser.setDefaultOption("Semi Curvature", 0);
+    driveModeChooser.addOption("Reg Curvature", 1);
+    driveModeChooser.addOption("Arcade", 2);
+    
+    SmartDashboard.putData("Autonomous Mode", m_autoChooser);
+    SmartDashboard.putData("Driver Controls", driverControlsChooser);
+    SmartDashboard.putData("Drive Controller Scaling", controllerScalingChooser);
+    SmartDashboard.putData("Drive Mode", driveModeChooser);
+
+    // Constants
+    SmartDashboard.putNumber("Ramp Rate",Constants.DriveConstants.kRampRate);
+    SmartDashboard.putNumber("Ramp Rate",Constants.DriveConstants.kDeadband);
+    SmartDashboard.putNumber("Ramp Rate",Constants.DriveConstants.kSlewRateLimiter);
+  }
+
+  public void manualDrive() {
+    driveCommand = new DriveCommand(m_driveTrain, driveController);
+    m_driveTrain.setDefaultCommand(driveCommand);
+}
+
+public void safeReset() {
+  m_driveTrain.stopMotors();
+  m_driveTrain.resetEncoders();
+}
+
+
  
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -98,9 +140,20 @@ public class RobotContainer {
   */
   public Command getAutonomousCommand() {
     // The selected command will be run in autonomous
-    return m_chooser.getSelected();
+    return m_autoChooser.getSelected();
   }
-  
 
+  public int getDriverControlsChooser() {
+    return driverControlsChooser.getSelected();
+  }
+
+  public int getDriveModeChooser() {
+    return driveModeChooser.getSelected();
+  }
+
+  public int getControllerScalingChooser() {
+    return controllerScalingChooser.getSelected();
+  }
 }
+  
 
