@@ -13,9 +13,11 @@
 package frc.robot.subsystems;
 
 import frc.robot.Constants;
+import frc.robot.OI;
 import frc.robot.RobotContainer;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.commands.*;
+//import frc.robot.OI;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -52,23 +54,21 @@ import edu.wpi.first.math.util.Units;
  */
 public class DriveTrain extends SubsystemBase {
 
-    private static DriveTrain mInstance = null;
-    private RobotContainer m_robotContainer;
-
     private DifferentialDrive m_drive;
     private MotorControllerGroup m_driveLeft;
     private MotorControllerGroup m_driveRight;
 
     // Constants
-    static final double m_turnGain = DriveConstants.kTurnGain;
-    static final double m_deadband = DriveConstants.kDeadband;
-    static final double m_driveGain = DriveConstants.kDriveGain;
+    private double m_turnGain = DriveConstants.kTurnGain;
+    private double m_deadband = DriveConstants.kDeadband;
+    private double m_driveGain = DriveConstants.kDriveGain;
+    private boolean brakesEnabled = false;
 
     // Hardware
     private WPI_TalonSRX driveLeftLeader;
-    private WPI_VictorSPX m_driveLeftFollower;
+    private WPI_VictorSPX driveLeftFollower;
     private WPI_TalonSRX driveRightLeader;
-    private WPI_VictorSPX m_driveRightFollower;
+    private WPI_VictorSPX driveRightFollower;
 
     // Controllers
     protected XboxController driveController;
@@ -77,28 +77,19 @@ public class DriveTrain extends SubsystemBase {
     private DifferentialDriveOdometry odometry;
     private AHRS gyro;
     private double inversionMultiplier = 1;
- 
-    // public static DriveTrain getInstance() {
-	// 	if (mInstance == null) {
-	// 		mInstance = new DriveTrain();
-	// 	}
-
-	// 	return mInstance;
-		
-	// }
 
 
     public DriveTrain() {
 
         driveLeftLeader = new WPI_TalonSRX(DriveConstants.kLeftLeaderPort);
         driveLeftLeader.configFactoryDefault();
-        m_driveLeftFollower = new WPI_VictorSPX(DriveConstants.kLeftFollowerPort);
-        m_driveLeftFollower.configFactoryDefault();
+        driveLeftFollower = new WPI_VictorSPX(DriveConstants.kLeftFollowerPort);
+        driveLeftFollower.configFactoryDefault();
 
         driveRightLeader = new WPI_TalonSRX(DriveConstants.kRightLeaderPort);
         driveRightLeader.configFactoryDefault();
-        m_driveRightFollower = new WPI_VictorSPX(DriveConstants.kRightFollowerPort);
-        m_driveRightFollower.configFactoryDefault();
+        driveRightFollower = new WPI_VictorSPX(DriveConstants.kRightFollowerPort);
+        driveRightFollower.configFactoryDefault();
 
         /* Set the peak and nominal outputs */
         driveLeftLeader.configNominalOutputForward(0, 30);
@@ -120,20 +111,20 @@ public class DriveTrain extends SubsystemBase {
 
         // Invert and set Break Mode
         driveLeftLeader.setInverted(false);
-        m_driveLeftFollower.setInverted(false);
-        driveLeftLeader.setNeutralMode(NeutralMode.Coast);
-        m_driveLeftFollower.setNeutralMode(NeutralMode.Coast);
+        driveLeftFollower.setInverted(false);
+        // driveLeftLeader.setNeutralMode(NeutralMode.Coast);
+        // driveLeftFollower.setNeutralMode(NeutralMode.Coast);
 
         driveRightLeader.setInverted(true);
-        m_driveRightFollower.setInverted(true);
+        driveRightFollower.setInverted(true);
         driveRightLeader.setNeutralMode(NeutralMode.Coast);
-        m_driveRightFollower.setNeutralMode(NeutralMode.Coast);
+        driveRightFollower.setNeutralMode(NeutralMode.Coast);
 
         // Config Left Motors
         driveLeftLeader.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 30);
         driveLeftLeader.setSensorPhase(false);
         driveLeftLeader.configNeutralDeadband(m_deadband);
-        m_driveLeftFollower.configNeutralDeadband(m_deadband);
+        driveLeftFollower.configNeutralDeadband(m_deadband);
 
         // Config Right Motors
         driveRightLeader.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 30);
@@ -142,11 +133,11 @@ public class DriveTrain extends SubsystemBase {
         driveRightLeader.configNeutralDeadband(m_deadband);
 
         // Config differential drive
-        m_driveLeftFollower.follow(driveLeftLeader);
-        m_driveRightFollower.follow(driveRightLeader);
+        driveLeftFollower.follow(driveLeftLeader);
+        driveRightFollower.follow(driveRightLeader);
 
-        m_driveLeft = new MotorControllerGroup(driveLeftLeader, m_driveLeftFollower);
-        m_driveRight = new MotorControllerGroup(driveRightLeader, m_driveRightFollower);
+        m_driveLeft = new MotorControllerGroup(driveLeftLeader, driveLeftFollower);
+        m_driveRight = new MotorControllerGroup(driveRightLeader, driveRightFollower);
         
         driveLeftLeader.configOpenloopRamp(DriveConstants.kRampRate);
         driveRightLeader.configOpenloopRamp(DriveConstants.kRampRate);
@@ -157,27 +148,28 @@ public class DriveTrain extends SubsystemBase {
 
         // Config sensors
 
-        try {
-            gyro = new AHRS(Port.kMXP);
-        } catch (RuntimeException ex) {
-            DriverStation.reportError(ex.getMessage(), true);
-        }
-        Timer.delay(1.0);
-
+        gyro = new AHRS(Port.kMXP);
         gyro.reset();
         gyro.calibrate();
 
-        odometry = new DifferentialDriveOdometry(gyro.getRotation2d(), m_driveGain, m_deadband);
-
-        enableBrakes();
-        invertMotors();
+        odometry = new DifferentialDriveOdometry(gyro.getRotation2d(), m_driveGain, m_deadband); // ask Kelly about the purpose of drivegain & deadband here
+        
     }
 
 
     @Override
     public void periodic() {
-        invertMotors();
-        //odometry.update(gyro.getRotation2d(), leftMeters(), rightMeters());
+        if (OI.getInstance().shouldInvertMotors()) {
+            invertMotors();
+        }
+        if (OI.getInstance().shouldEnableBrakes()) {
+            brakesEnabled = true;
+        }
+        enableBrakes(brakesEnabled);
+        SmartDashboard.putBoolean("Brakes Enabled", brakesEnabled);
+        //brakesEnabled = false;
+
+        odometry.update(gyro.getRotation2d(), leftMeters(), rightMeters());
     }
 
     @Override
@@ -227,25 +219,25 @@ public class DriveTrain extends SubsystemBase {
         m_drive.feed();
     }
 
-    public void enableBrakes() {
-        if (RobotContainer.getInstance().enableBrakes()) {
-            driveLeftLeader.setNeutralMode(NeutralMode.Brake);
-            driveRightLeader.setNeutralMode(NeutralMode.Brake);
-            return;
+    public void enableBrakes(boolean enabled) {
+        
+        // SmartDashboard.putBoolean("Brakes Enabled", brakesEnabled);
+        if (enabled) {
+        driveLeftLeader.setNeutralMode(NeutralMode.Brake);
+        driveRightLeader.setNeutralMode(NeutralMode.Brake);
         }
-        driveLeftLeader.setNeutralMode(NeutralMode.Coast);
+        else {
         driveRightLeader.setNeutralMode(NeutralMode.Coast);
+        driveRightFollower.setNeutralMode(NeutralMode.Coast);
+        }
+        brakesEnabled = false;
     }
 
     public void invertMotors() {
-      if (RobotContainer.getInstance().invertMotors()) {
-            if (inversionMultiplier == -1) {
-                inversionMultiplier = 1;
-            } else {
-                inversionMultiplier = 1;
-            }
-        }
+        inversionMultiplier *= -1;
+        SmartDashboard.putNumber("Inverted", inversionMultiplier);
     }
+    
 
     /* SENSORS */
 
@@ -253,9 +245,9 @@ public class DriveTrain extends SubsystemBase {
         return odometry.getPoseMeters();
     }
 
-    // public void resetOdometry(Pose2d pose) {
-    //     resetEncoders();
-    // }
+    public void resetOdometry(Pose2d pose) {
+        resetEncoders();
+    }
 
     /** Resets the drive encoders to currently read a position of 0. */
     public void resetEncoders() {
