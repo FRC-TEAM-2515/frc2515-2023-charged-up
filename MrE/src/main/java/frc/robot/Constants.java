@@ -31,7 +31,7 @@ public class Constants {
         public static final double kRampRate = 4.023;
         public static final double kSlewRateLimiter = 0.5; // units per second
 
-        public static final double kSpeedOutputModifier = 0.00; //arbitrary
+        public static final double kSpeedOutputModifier = 1.00; //arbitrary
         public static final double kRotationOutpoudModifier = 0.6; //arbitrary
     }
 

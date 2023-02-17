@@ -49,7 +49,8 @@ public class RobotContainer {
 
     // Object choosers
     public final SendableChooser<Integer> driverControlsChooser = new SendableChooser<>();
-    public final SendableChooser<Integer> controllerScalingChooser = new SendableChooser<>();
+    /** The {@link SendableChooser} that allows the user to select their {@link DriveScaling}. */
+    public final SendableChooser<DriveScaling> controllerScalingChooser = new SendableChooser<>();
     public final SendableChooser<Integer> driveModeChooser = new SendableChooser<>();
 
   
@@ -101,10 +102,10 @@ public class RobotContainer {
     driverControlsChooser.setDefaultOption("Left Stick", 0);
     driverControlsChooser.addOption("Trigger Acceleration", 1);
 
-    controllerScalingChooser.setDefaultOption("Cubic", 0);
-    controllerScalingChooser.addOption("Linear", 1);
-    controllerScalingChooser.addOption("Squared", 2);
-    controllerScalingChooser.addOption("Limited Polynomic", 3);
+    controllerScalingChooser.setDefaultOption(DriveScaling.CUBIC.getDisplayText(), DriveScaling.CUBIC);
+    controllerScalingChooser.addOption(DriveScaling.QUADRATIC.getDisplayText(), DriveScaling.QUADRATIC);
+    controllerScalingChooser.addOption(DriveScaling.SQUARED.getDisplayText(), DriveScaling.SQUARED);
+    controllerScalingChooser.addOption(DriveScaling.LIMITED_POLYNOMIC.getDisplayText(), DriveScaling.LIMITED_POLYNOMIC);
 
     driveModeChooser.setDefaultOption("Semi Curvature", 0);
     driveModeChooser.addOption("Reg Curvature", 1);
@@ -151,7 +152,7 @@ public void safeReset() {
     return driveModeChooser.getSelected();
   }
 
-  public int getControllerScalingChooser() {
+  public DriveScaling getDriveScaling() {
     return controllerScalingChooser.getSelected();
   }
 }
