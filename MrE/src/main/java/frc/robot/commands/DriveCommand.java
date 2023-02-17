@@ -20,6 +20,7 @@ import frc.robot.Constants.DriveConstants;
 import frc.robot.RobotContainer;
 import frc.robot.RobotContainer.*;
 import java.util.function.DoubleSupplier;
+import frc.robot.OI;
 
 /**
  * Creates teleop drivetrain drive command
@@ -30,7 +31,9 @@ public class DriveCommand extends CommandBase {
     // DriveCommand Variable Declarations 
 
     // DriveCommand Constructors
+    private RobotContainer m_robotContainer;
     private DriveTrain m_drivetrain; // = DriveTrain.getInstance();
+    // private OI m_oi;
     private XboxController m_driveController;
     private int m_driverControlsChoice;
     private int m_driveModeChoice;
@@ -39,9 +42,9 @@ public class DriveCommand extends CommandBase {
     public DriveCommand(DriveTrain subsystem, XboxController controller) {
         m_drivetrain = subsystem;
         m_driveController = controller; 
-        m_driverControlsChoice = RobotContainer.getInstance().getDriverControlsChooser();
-        m_driveModeChoice = RobotContainer.getInstance().getDriveModeChooser();
-        m_controllerScalingChoice = RobotContainer.getInstance().getControllerScalingChooser();
+        m_driverControlsChoice = OI.getInstance().getDriverControlsChooser();
+        m_driveModeChoice = OI.getInstance().getDriveModeChooser();
+        m_controllerScalingChoice = OI.getInstance().getControllerScalingChooser();
         // Ensures that two commands that need the same subsystem dont mess each other up. 
         addRequirements (m_drivetrain);  
     }
@@ -57,8 +60,14 @@ public class DriveCommand extends CommandBase {
     public void execute() {
         double speed = 0;
         double rotation = 0;
-        driverControls(speed, rotation, m_driverControlsChoice);
-        controllerScaling(speed, rotation, m_controllerScalingChoice);
+
+        driverControls(speed, m_driverControlsChoice);
+        rotation = (m_driveController.getLeftX() * DriveConstants.kRotationOutputModifier);
+
+        //controllerScaling(speed, rotation, m_controllerScalingChoice);
+        scalingRotation(rotation, m_controllerScalingChoice);
+        scalingSpeed(speed, m_controllerScalingChoice);
+
         driveMode(speed, rotation, m_driveModeChoice);
 
         double leftSpeed = speed + rotation;
@@ -92,12 +101,7 @@ public class DriveCommand extends CommandBase {
 
     }
 
-    public void driverControls(double speed, double rotation, int choice) {
-        speedControls(speed, choice);
-        rotation = (m_driveController.getLeftX() * DriveConstants.kRotationOutpoudModifier);
-        }
-
-        public double speedControls(double speed, int choice){
+    public double driverControls(double speed, int choice) {
             if (choice == 0){ //default left stick controls
                 speed = (m_driveController.getLeftY() * DriveConstants.kSpeedOutputModifier);
             } else { //accelerated with trigger controls
@@ -106,10 +110,10 @@ public class DriveCommand extends CommandBase {
             return speed;
         }
 
-    public void controllerScaling(double speed, double rotation, int choice) {
-       scalingSpeed(rotation, choice);
-       scalingRotation(speed, choice);
-    }
+    // public void controllerScaling(double speed, double rotation, int choice) {
+    //    scalingSpeed(rotation, choice);
+    //    scalingRotation(speed, choice);
+    // }
 
         public double scalingSpeed(double speed, int choice){
             if (choice == 0){ //linear scaling

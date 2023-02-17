@@ -19,6 +19,8 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.commands.DriveCommand;
+import frc.robot.RobotContainer;
+import frc.robot.OI;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -31,10 +33,9 @@ import frc.robot.commands.DriveCommand;
 
  
 public class Robot extends TimedRobot {
-    private Command autonomousCommand;
-
-    
-    private RobotContainer m_robotContainer;
+    protected Command autonomousCommand;
+    protected RobotContainer robotContainer;
+    protected OI oi;
 
     /**
      * This function is run when the robot is first started up and should be
@@ -42,8 +43,10 @@ public class Robot extends TimedRobot {
      */
     @Override
     public void robotInit() {
-        
-        m_robotContainer = RobotContainer.getInstance();
+        CommandScheduler.getInstance().cancelAll();
+        robotContainer = new RobotContainer();
+        OI.getInstance();
+        //m_robotContainer = RobotContainer.getInstance();
         HAL.report(tResourceType.kResourceType_Framework, tInstances.kFramework_RobotBuilder);
         //CommandScheduler.getInstance().cancelAll();
     }
@@ -77,7 +80,7 @@ public class Robot extends TimedRobot {
     */
     @Override
     public void autonomousInit() {
-        autonomousCommand = m_robotContainer.getAutonomousCommand();
+        autonomousCommand = oi.getAutonomousCommand();
 
         // schedule the autonomous command (example)
         if (autonomousCommand != null) {
@@ -94,15 +97,11 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopInit() {
-        // This makes sure that the autonomous stops running when
-        // teleop starts running. If you want the autonomous to
-        // continue until interrupted by another command, remove
-        // this line or comment it out.
         if (autonomousCommand != null) {
             autonomousCommand.cancel();
         }
+        robotContainer.manualDrive();
 
-        
     }
 
     /**
@@ -110,8 +109,7 @@ public class Robot extends TimedRobot {
      */
     @Override
     public void teleopPeriodic() {
-        m_robotContainer.manualDrive();
-        RobotContainer.getInstance().m_driveTrain.updateSmartDashboard();
+        robotContainer.getDriveTrain().updateSmartDashboard();
     }
 
     @Override
