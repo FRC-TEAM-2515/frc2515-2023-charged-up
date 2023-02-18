@@ -21,7 +21,7 @@ public class OI {
     private static SendableChooser<Command> autoChooser;
 
     private static SendableChooser<Integer> driverControlsChooser;
-    private static SendableChooser<Integer> controllerScalingChooser;
+    private static SendableChooser<DriveScaling> controllerScalingChooser;
     private static SendableChooser<Integer> driveModeChooser;
 
     private static DriveTrain driveTrain;
@@ -82,10 +82,10 @@ public void configureSmartDashboard() {
     driverControlsChooser.setDefaultOption("Left Stick", 0);
     driverControlsChooser.addOption("Trigger Acceleration", 1);
 
-    controllerScalingChooser.setDefaultOption("Cubic", 0);
-    controllerScalingChooser.addOption("Linear", 1);
-    controllerScalingChooser.addOption("Squared", 2);
-    controllerScalingChooser.addOption("Limited Polynomic", 3);
+    controllerScalingChooser.setDefaultOption(DriveScaling.CUBIC.getDisplayText(), DriveScaling.CUBIC);
+    controllerScalingChooser.addOption(DriveScaling.QUADRATIC.getDisplayText(), DriveScaling.QUADRATIC);
+    controllerScalingChooser.addOption(DriveScaling.SQUARED.getDisplayText(), DriveScaling.SQUARED);
+    controllerScalingChooser.addOption(DriveScaling.LIMITED_POLYNOMIC.getDisplayText(), DriveScaling.LIMITED_POLYNOMIC);
 
     driveModeChooser.setDefaultOption("Semi Curvature", 0);
     driveModeChooser.addOption("Reg Curvature", 1);
@@ -114,7 +114,7 @@ public XboxController getDriveController() {
     return driveModeChooser.getSelected();
   }
 
-  public int getControllerScalingChooser() {
+  public DriveScaling getControllerScalingChooser() {
     return controllerScalingChooser.getSelected();
   }
 
